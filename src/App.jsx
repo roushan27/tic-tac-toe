@@ -486,12 +486,12 @@ export default function App() {
     if (!statusMsg) {
       const p = current;
       const cls = p === "X" ? "name-x" : "name-o";
-      return <><span className={`${cls} blink`}>{displayName(p)}</span> ki baari hai</>;
+      return <><span className={`${cls} blink`}>{displayName(p)}</span>  turn</>;
     }
     if (statusMsg.type === "win") {
       const p = statusMsg.player;
       const cls = p === "X" ? "name-x" : "name-o";
-      return <><span className={cls}>{displayName(p)}</span> Jeet Gaya! 🎉</>;
+      return <><span className={cls}>{displayName(p)}</span> Wins! 🎉</>;
     }
     return <>Draw Hua! 🤝</>;
   }
@@ -514,7 +514,7 @@ export default function App() {
                 <div className="name-card-symbol">X</div>
                 <input
                   className="name-input"
-                  placeholder="Naam likho..."
+                  placeholder="Enter your Name"
                   value={names.X}
                   onChange={e => setNames(n => ({ ...n, X: e.target.value }))}
                   maxLength={14}
@@ -525,7 +525,7 @@ export default function App() {
                 <div className="name-card-symbol">O</div>
                 <input
                   className="name-input"
-                  placeholder="Naam likho..."
+                  placeholder="Enter your Name"
                   value={names.O}
                   onChange={e => setNames(n => ({ ...n, O: e.target.value }))}
                   maxLength={14}
@@ -537,7 +537,7 @@ export default function App() {
               onClick={() => { resetGame(); setPhase("game"); }}
               disabled={!names.X.trim() || !names.O.trim()}
             >
-              Game Shuru Karo
+              Start Game
             </button>
           </div>
         )}
