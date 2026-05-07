@@ -9,9 +9,11 @@ app.use(cors());
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
-
 const rooms = {};
 
 const WINS = [
