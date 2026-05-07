@@ -34,14 +34,29 @@ function checkWinner(board) {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("joinRoom", ({ roomId }, callback) => {
+  socket.on("joinRoom", ({ roomId, name }, callback) => {
     socket.join(roomId);
+    socket.data.roomId = roomId;
+    socket.data.name = name;
+  });
+
+ socket.on("typing", ({ name }) => {
+  const roomId = socket.data.roomId;
+  if (!roomId) return;
+
+  socket.to(roomId).emit("typing", { name });
+});
+  socket.on("joinRoom", ({ roomId, name }, callback) => {
+    socket.join(roomId);
+    socket.data.roomId = roomId;
+    socket.data.name = name;
 
     if (!rooms[roomId]) {
       rooms[roomId] = {
         board: Array(9).fill(null),
         current: "X",
         players: [],
+        names: {},
         scores: { X: 0, O: 0, D: 0 },
         gameOver: false,
         winnerCells: [],
@@ -50,7 +65,6 @@ io.on("connection", (socket) => {
 
     const room = rooms[roomId];
 
-    // Reconnect: if socket already in players list, restore their role
     const existing = room.players.find((p) => p.id === socket.id);
     if (existing) {
       callback({ role: existing.role });
@@ -64,7 +78,8 @@ io.on("connection", (socket) => {
     }
 
     const role = room.players.length === 0 ? "X" : "O";
-    room.players.push({ id: socket.id, role });
+    room.players.push({ id: socket.id, role, name });
+    room.names[role] = name || `Player ${role}`;
 
     callback({ role });
     io.to(roomId).emit("updateGame", room);
@@ -97,7 +112,6 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("updateGame", room);
   });
 
-  // Server-side reset so both clients sync
   socket.on("resetGame", ({ roomId }) => {
     const room = rooms[roomId];
     if (!room) return;
@@ -110,9 +124,19 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("updateGame", room);
   });
 
+  socket.on("chatMessage", (data) => {
+  io.in(data.roomId).emit("chatMessage", {
+    ...data,
+    time: Date.now(),
+    senderId: socket.id
+  });
+});
+
+socket.on("typing", ({ roomId, name }) => {
+  socket.to(roomId).emit("typing", { name });
+});
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
-    // Remove player from their room so the slot opens up
     for (const roomId in rooms) {
       const room = rooms[roomId];
       room.players = room.players.filter((p) => p.id !== socket.id);
@@ -120,6 +144,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(5000, () => {
-  console.log("Server running on port 5000");
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
