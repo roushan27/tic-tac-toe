@@ -40,12 +40,6 @@ io.on("connection", (socket) => {
     socket.data.name = name;
   });
 
- socket.on("typing", ({ name }) => {
-  const roomId = socket.data.roomId;
-  if (!roomId) return;
-
-  socket.to(roomId).emit("typing", { name });
-});
   socket.on("joinRoom", ({ roomId, name }, callback) => {
     socket.join(roomId);
     socket.data.roomId = roomId;

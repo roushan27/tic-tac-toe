@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import EmojiPicker from "emoji-picker-react";
 import { io } from "socket.io-client";
+
+
 
 const WINS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -92,7 +95,7 @@ const styles = `
   .chat-bubble-btn { position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, rgba(124,58,237,0.8), rgba(236,72,153,0.6)); border: 1px solid rgba(167,139,250,0.6); color: #fff; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(124,58,237,0.4); z-index: 600; transition: transform 0.2s; }
   .chat-bubble-btn:hover { transform: scale(1.1); }
   .chat-unread { position: absolute; top: -4px; right: -4px; background: #f472b6; color: #fff; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-  .chat-panel { position: fixed; bottom: 88px; right: 24px; width: 300px; background: rgba(15,10,30,0.97); border: 1px solid rgba(167,139,250,0.3); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 600; box-shadow: 0 8px 32px rgba(0,0,0,0.6);transform: scale(0.8);
+  .chat-panel { position: fixed; bottom: 88px; right: 24px; width: 300px; background: rgba(15,10,30,0.97); border: 1px solid rgba(167,139,250,0.3); overflow: visible; padding: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 600; box-shadow: 0 8px 32px rgba(0,0,0,0.6);transform: scale(0.8);
   opacity: 0;
   transform-origin: bottom right;
   pointer-events: none;
@@ -111,7 +114,25 @@ const styles = `
   .chat-send-btn:hover { background: rgba(167,139,250,0.5); }
   .typing-indicator { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 1px; min-height: 16px; }
   .emoji-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .emoji-picker-wrapper {
+  position: absolute;
+  bottom: 65px;
+  right: 0;
+  z-index: 9999;
 
+  animation: emojiOpen 0.18s ease;
+}
+
+@keyframes emojiOpen {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
   @media (max-width: 420px) {
     .cell { width: 80px; height: 80px; font-size: 30px; }
     .name-cards { flex-direction: column; align-items: center; }
@@ -196,6 +217,7 @@ export default function App() {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const showChatRef = useRef(false);
+  const [showEmoji, setShowEmoji] = useState(false);
 
   // showChat ka ref track karo taaki listener me latest value mile
   useEffect(() => { showChatRef.current = showChat; }, [showChat]);
@@ -272,7 +294,7 @@ export default function App() {
       time: Date.now(),
       senderId: socketRef.current.id,
     };
-    setMessages(prev => [...prev, msgData]);
+    
     socketRef.current.emit("chatMessage", msgData);
     setChatInput("");
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -511,7 +533,7 @@ export default function App() {
       {mode === "online" && phase === "game" && (
         <>
           {/* Chat Panel */}
-          {showChat && (
+          
            <div className={`chat-panel ${showChat ? "open" : ""}`}>
               <div className="chat-panel-title">💬 CHAT</div>
 
@@ -540,28 +562,65 @@ export default function App() {
                   </span>
                 ))}
               </div>
+            <div style={{ position: "relative" }}>
 
+  {showEmoji && (
+    <div
+      style={{
+        position: "absolute",
+        bottom: "60px",
+        right: "0",
+        zIndex: 9999
+      }}
+    >
+      <EmojiPicker
+        onEmojiClick={(emojiData) => {
+          setChatInput(prev => prev + emojiData.emoji);
+        }}
+        theme="dark"
+      />
+    </div>
+  )}
+
+  {/* Input Row */}
+  <div className="chat-input-row">
+
+    <input
+      className="name-input"
+      placeholder="Message..."
+      value={chatInput}
+      onChange={e => {
+        setChatInput(e.target.value);
+
+        socketRef.current.emit("typing", {
+          roomId,
+          name: names[myRole] || myRole
+        });
+      }}
+      onKeyDown={e => e.key === "Enter" && sendMessage()}
+      style={{ flex:1, textAlign:"left" }}
+    />
+
+    <button
+      className="chat-send-btn"
+      onClick={() => setShowEmoji(prev => !prev)}
+    >
+      😀
+    </button>
+
+    <button
+      className="chat-send-btn"
+      onClick={sendMessage}
+    >
+      ➤
+    </button>
+
+  </div>
+</div>
               {/* Input Row */}
-              <div className="chat-input-row">
-                <input
-                  className="name-input"
-                  placeholder="Message..."
-                  value={chatInput}
-                  onChange={e => {
-                    setChatInput(e.target.value);
-                    socketRef.current.emit("typing", { roomId, name: names[myRole] || myRole });
-                    clearTimeout(typingTimeoutRef.current);
-                    typingTimeoutRef.current = setTimeout(() => {
-                      socketRef.current.emit("typingStop", { roomId });
-                    }, 1000);
-                  }}
-                  onKeyDown={e => e.key === "Enter" && sendMessage()}
-                  style={{ flex:1, textAlign:"left" }}
-                />
-                <button className="chat-send-btn" onClick={sendMessage}>➤</button>
-              </div>
+            
             </div>
-          )}
+          
 
           {/* Floating Button */}
           <button className="chat-bubble-btn" onClick={() => {
